@@ -1,0 +1,11 @@
+package: github.com/antonysb13/BeenVerified
+import:
+- package: github.com/mattn/go-sqlite3
+  version: v1.2.0
+- package: goji.io
+  version: v2.0
+  subpackages:
+  - pat
+- package: golang.org/x/net
+  subpackages:
+  - context

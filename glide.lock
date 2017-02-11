@@ -1,0 +1,16 @@
+hash: cd5a38d3bf17ee769afb8ab68edf28949626d5176c64f567c1e9767c4478cea1
+updated: 2017-02-09T20:43:47.251069409-06:00
+imports:
+- name: github.com/mattn/go-sqlite3
+  version: ca5e3819723d8eeaf170ad510e7da1d6d2e94a08
+- name: goji.io
+  version: 0d89ff54b2c18c9c4ba530e32496aef902d3c6cd
+  subpackages:
+  - internal
+  - pat
+  - pattern
+- name: golang.org/x/net
+  version: a689eb3bc4b53af70390acc3cf68c9f549b6b8d6
+  subpackages:
+  - context
+testImports: []
