@@ -56,10 +56,10 @@ func main() {
 
 	//Songs Handlers
 	mux.HandleFunc(pat.Get("/songs"), findAllSongs)
-	/*mux.HandleFunc(pat.Get("/songs/artist/:artist"), findSongByArtist)
+	mux.HandleFunc(pat.Get("/songs/artist/:artist"), findSongByArtist)
 	mux.HandleFunc(pat.Get("/songs/song/:song"), findSongBySong)
-	mux.HandleFunc(pat.Get("/songs/genre/:genre"), findSongByGenre)
-	mux.HandleFunc(pat.Get("/songs/length/:minLength/:maxLength"), findSongByLength)
+	//mux.HandleFunc(pat.Get("/songs/genre/:genre"), findSongByGenre)
+	/*mux.HandleFunc(pat.Get("/songs/length/:minLength/:maxLength"), findSongByLength)
 	
 	//Genres Handlers
 	mux.HandleFunc(pat.Get("/genres"), findAllGenres)
@@ -81,9 +81,63 @@ func findAllSongs(w http.ResponseWriter, r *http.Request){
     rows := findAllSongsDB(database)
     defer rows.Close()
  
-    songs := []Song {}
+    //Output the resulted rows as JSON data
+    printResultAsJSON(w, rows)
+}
 
-    //Iterate over the returned rows
+//findSongByArtist finds all the songs in the database that match with the given artist
+func findSongByArtist(w http.ResponseWriter, r *http.Request){
+
+	//Get the parameter value
+	artist := pat.Param(r, "artist")
+
+	//Initilize and open the database
+	database := initDatabase(databaseFilePath)
+	defer database.Close()
+
+	//Get the songs in database that match with the given artist
+    rows := findSongByArtistDB(database, artist)
+    defer rows.Close()
+ 
+    //Output the resulted rows as JSON data
+    printResultAsJSON(w, rows)
+}
+
+//findSongBySong finds all the songs in the database that match with the given song
+func findSongBySong(w http.ResponseWriter, r *http.Request){
+
+	//Get the parameter value
+	song := pat.Param(r, "song")
+
+	//Initilize and open the database
+	database := initDatabase(databaseFilePath)
+	defer database.Close()
+
+	//Get the songs in database that match with the given song
+    rows := findSongBySongDB(database, song)
+    defer rows.Close()
+ 
+    //Output the resulted rows as JSON data
+    printResultAsJSON(w, rows)
+}
+
+//printResultAsJSON outputs the resulted rows as JSON data
+func printResultAsJSON(w http.ResponseWriter, rows *sql.Rows){
+	//Encode rows into JSON data
+    jsonResponse := songRowsToJSON(rows)
+
+    fmt.Println(string(jsonResponse))
+
+    //Format the JSON into string and write the result to w  
+    fmt.Fprintf(w, string(jsonResponse))
+}
+
+//songRowsToJSON encodes the given rows into JSON data
+func songRowsToJSON(rows *sql.Rows) []byte{
+
+	songs := []Song {}
+
+    //Iterate over the rows
     for rows.Next(){
 
     	song := Song{}
@@ -110,10 +164,7 @@ func findAllSongs(w http.ResponseWriter, r *http.Request){
     //Encode the Go object into JSON data
     jsonResponse,_ := json.Marshal(songsListResult)
 
-    fmt.Println(string(jsonResponse))
-
-    //Format the JSON into string and write the result to w  
-    fmt.Fprintf(w, string(jsonResponse))
+    return jsonResponse
 }
 
 /* Database Functions */
@@ -134,8 +185,17 @@ func initDatabase(filePath string) *sql.DB{
 func findAllSongsDB(database *sql.DB) *sql.Rows{
 	sqlStatement := "SELECT S.ID, S.artist, S.song, G.name, S.length FROM songs as S INNER JOIN genres as G on S.genre = G.ID"
 
+	//Prepare the sql statement
+	sqlStmtPrepared, sqlStmtError := database.Prepare(sqlStatement)
+
+	if sqlStmtError != nil {
+		fmt.Println("Something went wrong preparing the sql statement: " + sqlStatement)
+        fmt.Println(sqlStmtError)
+	}
+	defer sqlStmtPrepared.Close()
+
     //Execute the sql statement
-    rows, rowsError := database.Query(sqlStatement)
+    rows, rowsError := sqlStmtPrepared.Query()
 
     if rowsError != nil {
     	fmt.Println("Something went wrong executing the sql statement: " + sqlStatement)
@@ -144,6 +204,89 @@ func findAllSongsDB(database *sql.DB) *sql.Rows{
 
     return rows
 }
+
+//findSongByArtistDB gets the songs in database that match with the given artist
+func findSongByArtistDB(database *sql.DB, artist string) *sql.Rows{
+	sqlStatement := "SELECT S.ID, S.artist, S.song, G.name, S.length FROM (SELECT * FROM songs WHERE artist LIKE ?) as S" + 
+																		" INNER JOIN genres as G on S.genre = G.ID"
+
+	//Prepare the sql statement
+	sqlStmtPrepared, sqlStmtError := database.Prepare(sqlStatement)
+
+	if sqlStmtError != nil {
+		fmt.Println("Something went wrong preparing the sql statement: " + sqlStatement)
+        fmt.Println(sqlStmtError)
+	}
+	defer sqlStmtPrepared.Close()
+
+	parameter := "%" + artist + "%"
+
+    //Execute the sql statement
+    rows, rowsError := sqlStmtPrepared.Query(parameter)
+
+    if rowsError != nil {
+    	fmt.Println("Something went wrong executing the sql statement: " + sqlStatement)
+        fmt.Println(rowsError)
+    }
+
+    return rows
+}
+
+//findSongBySongDB gets the songs in database that match with the given song
+func findSongBySongDB(database *sql.DB, song string) *sql.Rows{
+	sqlStatement := "SELECT S.ID, S.artist, S.song, G.name, S.length FROM (SELECT * FROM songs WHERE song LIKE ?) as S" + 
+																		" INNER JOIN genres as G on S.genre = G.ID"
+
+	//Prepare the sql statement
+	sqlStmtPrepared, sqlStmtError := database.Prepare(sqlStatement)
+
+	if sqlStmtError != nil {
+		fmt.Println("Something went wrong preparing the sql statement: " + sqlStatement)
+        fmt.Println(sqlStmtError)
+	}
+	defer sqlStmtPrepared.Close()
+
+	parameter := "%" + song + "%"
+
+    //Execute the sql statement
+    rows, rowsError := sqlStmtPrepared.Query(parameter)
+
+    if rowsError != nil {
+    	fmt.Println("Something went wrong executing the sql statement: " + sqlStatement)
+        fmt.Println(rowsError)
+    }
+
+    return rows
+}
+
+//findSongByGenreDB gets the songs in database that match with the given genre
+func findSongByGenreDB(database *sql.DB, genre string) *sql.Rows{
+	sqlStatement := "SELECT S.ID, S.artist, S.song, G.name, S.length FROM songs as S INNER JOIN genres as G on S.genre = G.ID " + 
+																					"WHERE G.name LIKE ?"
+
+	//Prepare the sql statement
+	sqlStmtPrepared, sqlStmtError := database.Prepare(sqlStatement)
+
+	if sqlStmtError != nil {
+		fmt.Println("Something went wrong preparing the sql statement: " + sqlStatement)
+        fmt.Println(sqlStmtError)
+	}
+	defer sqlStmtPrepared.Close()
+
+	parameter := "%" + genre + "%"
+
+    //Execute the sql statement
+    rows, rowsError := sqlStmtPrepared.Query(parameter)
+
+    if rowsError != nil {
+    	fmt.Println("Something went wrong executing the sql statement: " + sqlStatement)
+        fmt.Println(rowsError)
+    }
+
+    return rows
+}
+
+//
 
 
 
