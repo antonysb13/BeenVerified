@@ -23,6 +23,7 @@ To get a copy of the project in your local machine run the next instruction in y
 
 ```
 git clone https://github.com/antonysb13/BeenVerified.git $GOPATH/src/github.com/antonysb13/BeenVerified
+```
 
 Move to project's directory:
 
